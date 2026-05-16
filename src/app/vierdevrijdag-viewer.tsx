@@ -63,6 +63,14 @@ const MAX_TIMER_SCALE = 2.5;
 const DEFAULT_TIMER_LAYOUT = { x: 50, y: 48, scale: 0.25 };
 const DEFAULT_CONTROL_LAYOUT = { x: 50, y: 92 };
 const MAX_DISPLAY_SECONDS = 99 * 60 + 99;
+const CONTROL_GAP_PX = 8;
+const MOBILE_CONTROL_GROUP_WIDTH_PX = 280;
+const DESKTOP_CONTROL_GROUP_WIDTH_PX = 248;
+const MOBILE_CONTROL_PADDING_X_PX = 16;
+const DESKTOP_CONTROL_PADDING_X_PX = 24;
+const MOBILE_SCREEN_MARGIN_X_PX = 32;
+const DESKTOP_SCREEN_MARGIN_X_PX = 56;
+const CONTROL_WIDTH_SAFETY_PX = 8;
 
 function getTag(event: NostrEvent, name: string) {
   return event.tags.find((tag) => tag[0] === name)?.[1] ?? "";
@@ -297,6 +305,7 @@ export default function VierDeVrijdagViewer() {
   const [storageReady, setStorageReady] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dropdownWidthPx, setDropdownWidthPx] = useState<number | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [selectedType, setSelectedType] = useState("");
   const [sessionMinutes, setSessionMinutes] = useState(
@@ -350,6 +359,55 @@ export default function VierDeVrijdagViewer() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [eventLabels]);
+
+  useEffect(() => {
+    const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+    const frame = window.requestAnimationFrame(updateViewportWidth);
+
+    window.addEventListener("resize", updateViewportWidth);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updateViewportWidth);
+    };
+  }, []);
+
+  const controlLayoutMetrics = useMemo(() => {
+    if (!dropdownWidthPx || !viewportWidth) return null;
+
+    const isDesktop = viewportWidth >= 640;
+    const controlGroupWidth = isDesktop
+      ? DESKTOP_CONTROL_GROUP_WIDTH_PX
+      : MOBILE_CONTROL_GROUP_WIDTH_PX;
+    const paddingX = isDesktop
+      ? DESKTOP_CONTROL_PADDING_X_PX
+      : MOBILE_CONTROL_PADDING_X_PX;
+    const screenMarginX = isDesktop
+      ? DESKTOP_SCREEN_MARGIN_X_PX
+      : MOBILE_SCREEN_MARGIN_X_PX;
+    const maxPanelWidth = Math.max(240, viewportWidth - screenMarginX);
+    const maxContentWidth = maxPanelWidth - paddingX - CONTROL_WIDTH_SAFETY_PX;
+    const inlineFits =
+      dropdownWidthPx + CONTROL_GAP_PX + controlGroupWidth <= maxContentWidth;
+    const wraps = !isDesktop && !inlineFits;
+    const dropdownWidth = wraps
+      ? Math.min(dropdownWidthPx, maxContentWidth)
+      : Math.min(
+          dropdownWidthPx,
+          maxContentWidth - CONTROL_GAP_PX - controlGroupWidth,
+        );
+    const contentWidth = wraps
+      ? Math.max(dropdownWidth, controlGroupWidth)
+      : dropdownWidth + CONTROL_GAP_PX + controlGroupWidth;
+
+    return {
+      dropdownWidth,
+      panelWidth: Math.min(
+        maxPanelWidth,
+        contentWidth + paddingX + CONTROL_WIDTH_SAFETY_PX,
+      ),
+      wraps,
+    };
+  }, [dropdownWidthPx, viewportWidth]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -465,6 +523,38 @@ export default function VierDeVrijdagViewer() {
   }, [timerState]);
 
   useEffect(() => {
+    const preventDefault = (event: Event) => event.preventDefault();
+    const preventTouchZoom = (event: TouchEvent) => {
+      if (event.touches.length > 1) event.preventDefault();
+    };
+    const preventWheelZoom = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey) event.preventDefault();
+    };
+    const preventKeyboardZoom = (event: KeyboardEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      if (["+", "=", "-", "_", "0"].includes(event.key)) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("gesturestart", preventDefault);
+    window.addEventListener("gesturechange", preventDefault);
+    window.addEventListener("gestureend", preventDefault);
+    window.addEventListener("touchmove", preventTouchZoom, { passive: false });
+    window.addEventListener("wheel", preventWheelZoom, { passive: false });
+    window.addEventListener("keydown", preventKeyboardZoom);
+
+    return () => {
+      window.removeEventListener("gesturestart", preventDefault);
+      window.removeEventListener("gesturechange", preventDefault);
+      window.removeEventListener("gestureend", preventDefault);
+      window.removeEventListener("touchmove", preventTouchZoom);
+      window.removeEventListener("wheel", preventWheelZoom);
+      window.removeEventListener("keydown", preventKeyboardZoom);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!dropdownOpen) return;
 
     function handlePointerDown(event: PointerEvent) {
@@ -569,6 +659,7 @@ export default function VierDeVrijdagViewer() {
       }
 
       if (event.repeat) return;
+      if (event.ctrlKey || event.metaKey) return;
 
       if (event.key === "Enter") {
         event.preventDefault();
@@ -836,7 +927,11 @@ export default function VierDeVrijdagViewer() {
         ? "animate-pulse shadow-[0_0_45px_rgba(255,255,255,0.85),0_0_120px_rgba(255,255,255,0.55)] ring-2 ring-white/55"
         : "animate-pulse shadow-[0_0_45px_rgba(0,0,0,0.75),0_0_120px_rgba(0,0,0,0.45)] ring-2 ring-black/45"
       : "";
-  const showControls = storageReady && eventsLoaded && events.length > 0;
+  const showControls =
+    storageReady &&
+    eventsLoaded &&
+    events.length > 0 &&
+    Boolean(controlLayoutMetrics);
   const dropdownListPositionClass =
     controlLayout.y < 50
       ? "top-[calc(100%+0.5rem)]"
@@ -892,11 +987,14 @@ export default function VierDeVrijdagViewer() {
       ) : null}
 
       {showControls ? <div
-        className="absolute z-10 w-[calc(100vw-2rem)] max-w-6xl touch-none sm:w-[calc(100vw-3.5rem)]"
+        className="absolute z-10 max-w-[calc(100vw-2rem)] touch-none sm:max-w-[calc(100vw-3.5rem)]"
         style={{
           left: `${controlLayout.x}%`,
           top: `${controlLayout.y}%`,
           transform: "translate(-50%, -50%)",
+          width: controlLayoutMetrics
+            ? `${controlLayoutMetrics.panelWidth}px`
+            : undefined,
         }}
       >
         <div
@@ -905,11 +1003,15 @@ export default function VierDeVrijdagViewer() {
           onPointerMove={dragControls}
           onPointerUp={stopControlsDrag}
           onPointerCancel={stopControlsDrag}
-          className="flex w-full cursor-grab flex-wrap items-center gap-2 rounded-xl border border-white/20 bg-[#2d1232]/65 p-2 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-xl active:cursor-grabbing sm:p-3"
+          className={`flex w-full cursor-grab items-center gap-2 rounded-xl border border-white/20 bg-[#2d1232]/65 p-2 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-xl active:cursor-grabbing sm:p-3 ${controlLayoutMetrics?.wraps ? "flex-wrap justify-center" : "flex-nowrap"}`}
         >
           <div
-            className="relative min-w-0 flex-[1_1_100%] sm:flex-none"
-            style={{ width: dropdownWidthPx ? `min(${dropdownWidthPx}px, 100%)` : "100%" }}
+            className="relative min-w-0 flex-none"
+            style={{
+              width: controlLayoutMetrics
+                ? `${controlLayoutMetrics.dropdownWidth}px`
+                : "min(20rem, calc(100vw - 3rem))",
+            }}
           >
             <button
               ref={dropdownButtonRef}
@@ -971,37 +1073,39 @@ export default function VierDeVrijdagViewer() {
             ) : null}
           </div>
 
-          <div className="flex min-h-11 flex-[1_1_auto] overflow-hidden rounded-lg border border-[#ffd86c]/40 bg-[#7d1747]/85 shadow-lg shadow-black/25 sm:flex-none">
-            <button
-              type="button"
-              aria-label="Sessie korter"
-              onClick={() => updateSessionLength(sessionMinutes - 1)}
-              disabled={sessionMinutes <= 1}
-              className="w-12 text-lg font-black text-[#ffe39a] transition hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:w-10"
-            >
-              -
-            </button>
-            <div className="grid min-w-20 flex-1 place-items-center border-x border-[#ffd86c]/25 px-2 text-sm font-black text-[#ffe39a] sm:min-w-16 sm:flex-none">
-              {sessionMinutes} min
+          <div className="flex flex-none gap-2">
+            <div className="flex min-h-11 flex-none overflow-hidden rounded-lg border border-[#ffd86c]/40 bg-[#7d1747]/85 shadow-lg shadow-black/25">
+              <button
+                type="button"
+                aria-label="Sessie korter"
+                onClick={() => updateSessionLength(sessionMinutes - 1)}
+                disabled={sessionMinutes <= 1}
+                className="w-12 text-lg font-black text-[#ffe39a] transition hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:w-10"
+              >
+                -
+              </button>
+              <div className="grid min-w-16 flex-none place-items-center border-x border-[#ffd86c]/25 px-2 text-sm font-black text-[#ffe39a]">
+                {sessionMinutes} min
+              </div>
+              <button
+                type="button"
+                aria-label="Sessie langer"
+                onClick={() => updateSessionLength(sessionMinutes + 1)}
+                disabled={sessionMinutes >= MAX_SESSION_MINUTES}
+                className="w-12 text-lg font-black text-[#ffe39a] transition hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:w-10"
+              >
+                +
+              </button>
             </div>
+
             <button
               type="button"
-              aria-label="Sessie langer"
-              onClick={() => updateSessionLength(sessionMinutes + 1)}
-              disabled={sessionMinutes >= MAX_SESSION_MINUTES}
-              className="w-12 text-lg font-black text-[#ffe39a] transition hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:w-10"
+              onClick={toggleSession}
+              className="min-h-11 w-24 flex-none rounded-lg bg-[#f7c948] px-5 py-2.5 text-sm font-black text-[#2d1232] shadow-lg shadow-black/30 transition hover:bg-[#ffe39a] active:scale-[0.98]"
             >
-              +
+              {timerState === "running" ? "Klaar" : "Start"}
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={toggleSession}
-            className="min-h-11 w-24 flex-1 rounded-lg bg-[#f7c948] px-5 py-2.5 text-sm font-black text-[#2d1232] shadow-lg shadow-black/30 transition hover:bg-[#ffe39a] active:scale-[0.98] sm:flex-none"
-          >
-            {timerState === "running" ? "Klaar" : "Start"}
-          </button>
         </div>
       </div> : null}
     </main>

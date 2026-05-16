@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,8 +13,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://zeepkist.vercel.app"),
   title: "VierDeVrijdag | Wonders of Work",
-  description: "Live fullscreen beeld voor het eerstkomende VierDeVrijdag event.",
+  description:
+    "Fullscreen eventbeeld en verplaatsbare spreektijdtimer voor Wonders of Work events.",
+  applicationName: "Zeepkist",
+  authors: [{ name: "ericvrp" }],
+  creator: "ericvrp",
+  publisher: "ericvrp",
+  keywords: ["Wonders of Work", "VierDeVrijdag", "timer", "events"],
+  icons: {
+    icon: "/wonders-of-work.svg",
+    shortcut: "/wonders-of-work.svg",
+    apple: "/wonders-of-work.svg",
+  },
+  openGraph: {
+    title: "Zeepkist | Wonders of Work Timer",
+    description:
+      "Fullscreen eventbeeld en verplaatsbare spreektijdtimer voor Wonders of Work events.",
+    url: "/",
+    siteName: "Zeepkist",
+    type: "website",
+    locale: "nl_NL",
+  },
+  twitter: {
+    card: "summary",
+    title: "Zeepkist | Wonders of Work Timer",
+    description:
+      "Fullscreen eventbeeld en verplaatsbare spreektijdtimer voor Wonders of Work events.",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
