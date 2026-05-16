@@ -213,7 +213,10 @@ function saveStoredEventType(type: string) {
 function getStoredSessionMinutes() {
   if (typeof window === "undefined") return DEFAULT_SESSION_MINUTES;
 
-  const value = Number(window.localStorage.getItem(SESSION_MINUTES_STORAGE_KEY));
+  const storedValue = window.localStorage.getItem(SESSION_MINUTES_STORAGE_KEY);
+  if (!storedValue) return DEFAULT_SESSION_MINUTES;
+
+  const value = Number(storedValue);
 
   return Number.isFinite(value)
     ? Math.min(MAX_SESSION_MINUTES, Math.max(1, value))
@@ -293,6 +296,7 @@ export default function VierDeVrijdagViewer() {
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownWidthPx, setDropdownWidthPx] = useState<number | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [selectedType, setSelectedType] = useState("");
   const [sessionMinutes, setSessionMinutes] = useState(
@@ -322,15 +326,30 @@ export default function VierDeVrijdagViewer() {
     0,
     events.findIndex((event) => normalize(event.type) === selectedValue),
   );
-  const dropdownWidth = useMemo(() => {
-    const longestLabel = events.reduce((longest, event) => {
-      const label = `${formatEventDate(event.start)} - ${event.type}`;
+  const eventLabels = useMemo(() => {
+    if (!events.length) return ["Events laden..."];
 
-      return Math.max(longest, label.length);
-    }, 16);
-
-    return `min(${longestLabel + 7}ch, 100%)`;
+    return events.map((event) => `${formatEventDate(event.start)} - ${event.type}`);
   }, [events]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      if (!context) return;
+
+      context.font = "900 14px Arial, Helvetica, sans-serif";
+
+      const widestLabel = Math.max(
+        ...eventLabels.map((label) => context.measureText(label).width),
+      );
+
+      setDropdownWidthPx(Math.ceil(widestLabel + 82));
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [eventLabels]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -890,7 +909,7 @@ export default function VierDeVrijdagViewer() {
         >
           <div
             className="relative min-w-0 flex-[1_1_100%] sm:flex-none"
-            style={{ width: dropdownWidth }}
+            style={{ width: dropdownWidthPx ? `min(${dropdownWidthPx}px, 100%)` : "100%" }}
           >
             <button
               ref={dropdownButtonRef}
