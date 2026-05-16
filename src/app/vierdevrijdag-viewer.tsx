@@ -286,6 +286,7 @@ export default function VierDeVrijdagViewer() {
   const timerRef = useRef<HTMLButtonElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const dropdownButtonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const timerDragOffsetRef = useRef({ x: 0, y: 0 });
   const controlsDragOffsetRef = useRef({ x: 0, y: 0 });
   const [events, setEvents] = useState<EventOption[]>([]);
@@ -321,6 +322,15 @@ export default function VierDeVrijdagViewer() {
     0,
     events.findIndex((event) => normalize(event.type) === selectedValue),
   );
+  const dropdownWidth = useMemo(() => {
+    const longestLabel = events.reduce((longest, event) => {
+      const label = `${formatEventDate(event.start)} - ${event.type}`;
+
+      return Math.max(longest, label.length);
+    }, 16);
+
+    return `min(${longestLabel + 7}ch, 100%)`;
+  }, [events]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -434,6 +444,26 @@ export default function VierDeVrijdagViewer() {
 
     return () => window.clearInterval(interval);
   }, [timerState]);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+
+      if (
+        dropdownButtonRef.current?.contains(target) ||
+        dropdownRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setDropdownOpen(false);
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [dropdownOpen]);
 
   const updateSessionLength = useCallback((minutes: number) => {
     const difference = minutes - sessionMinutes;
@@ -858,7 +888,10 @@ export default function VierDeVrijdagViewer() {
           onPointerCancel={stopControlsDrag}
           className="flex w-full cursor-grab flex-wrap items-center gap-2 rounded-xl border border-white/20 bg-[#2d1232]/65 p-2 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-xl active:cursor-grabbing sm:p-3"
         >
-          <div className="relative min-w-0 flex-[1_1_320px]">
+          <div
+            className="relative min-w-0 flex-[1_1_100%] sm:flex-none"
+            style={{ width: dropdownWidth }}
+          >
             <button
               ref={dropdownButtonRef}
               type="button"
@@ -887,6 +920,7 @@ export default function VierDeVrijdagViewer() {
             </span>
             {dropdownOpen ? (
               <div
+                ref={dropdownRef}
                 role="listbox"
                 className={`absolute left-0 z-20 max-h-80 w-full overflow-y-auto rounded-lg border border-white/20 bg-[#f8d37a] p-1 text-[#281028] shadow-2xl shadow-black/45 ${dropdownListPositionClass}`}
               >
@@ -906,7 +940,7 @@ export default function VierDeVrijdagViewer() {
                         selectEventType(value);
                         setDropdownOpen(false);
                       }}
-                      className={`block w-full rounded-md px-3 py-2 text-left text-sm font-black ${
+                      className={`block w-full whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-black ${
                         isHighlighted ? "bg-[#2d1232] text-[#ffe39a]" : ""
                       } ${isSelected && !isHighlighted ? "bg-[#7d1747]/15" : ""}`}
                     >
@@ -918,17 +952,17 @@ export default function VierDeVrijdagViewer() {
             ) : null}
           </div>
 
-          <div className="flex min-h-11 flex-[0_1_auto] overflow-hidden rounded-lg border border-[#ffd86c]/40 bg-[#7d1747]/85 shadow-lg shadow-black/25">
+          <div className="flex min-h-11 flex-[1_1_auto] overflow-hidden rounded-lg border border-[#ffd86c]/40 bg-[#7d1747]/85 shadow-lg shadow-black/25 sm:flex-none">
             <button
               type="button"
               aria-label="Sessie korter"
               onClick={() => updateSessionLength(sessionMinutes - 1)}
               disabled={sessionMinutes <= 1}
-              className="w-10 text-lg font-black text-[#ffe39a] transition hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35"
+              className="w-12 text-lg font-black text-[#ffe39a] transition hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:w-10"
             >
               -
             </button>
-            <div className="grid min-w-16 place-items-center border-x border-[#ffd86c]/25 px-2 text-sm font-black text-[#ffe39a]">
+            <div className="grid min-w-20 flex-1 place-items-center border-x border-[#ffd86c]/25 px-2 text-sm font-black text-[#ffe39a] sm:min-w-16 sm:flex-none">
               {sessionMinutes} min
             </div>
             <button
@@ -936,7 +970,7 @@ export default function VierDeVrijdagViewer() {
               aria-label="Sessie langer"
               onClick={() => updateSessionLength(sessionMinutes + 1)}
               disabled={sessionMinutes >= MAX_SESSION_MINUTES}
-              className="w-10 text-lg font-black text-[#ffe39a] transition hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35"
+              className="w-12 text-lg font-black text-[#ffe39a] transition hover:bg-white/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:w-10"
             >
               +
             </button>
@@ -945,7 +979,7 @@ export default function VierDeVrijdagViewer() {
           <button
             type="button"
             onClick={toggleSession}
-            className="min-h-11 w-24 flex-none rounded-lg bg-[#f7c948] px-5 py-2.5 text-sm font-black text-[#2d1232] shadow-lg shadow-black/30 transition hover:bg-[#ffe39a] active:scale-[0.98]"
+            className="min-h-11 w-24 flex-1 rounded-lg bg-[#f7c948] px-5 py-2.5 text-sm font-black text-[#2d1232] shadow-lg shadow-black/30 transition hover:bg-[#ffe39a] active:scale-[0.98] sm:flex-none"
           >
             {timerState === "running" ? "Klaar" : "Start"}
           </button>
