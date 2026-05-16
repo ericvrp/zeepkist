@@ -823,7 +823,7 @@ export default function VierDeVrijdagViewer() {
           }}
         >
           <time
-            className={`relative rounded-2xl px-[4vw] pb-[3vw] pt-[1.5vw] font-mono font-black leading-none tracking-[0.08em] ring-1 transition ${timerToneClass} ${timerWarningClass} ${timerExpiredClass}`}
+            className={`relative rounded-2xl px-[4vw] pb-[4.25vw] pt-[1.5vw] font-mono font-black leading-none tracking-[0.08em] ring-1 transition ${timerToneClass} ${timerWarningClass} ${timerExpiredClass}`}
             style={{ fontSize: `clamp(3.5rem, ${24 * timerLayout.scale}vw, ${24 * timerLayout.scale}rem)` }}
           >
             {formatTime(remainingSeconds)}
@@ -834,7 +834,7 @@ export default function VierDeVrijdagViewer() {
                 event.stopPropagation();
                 resizeTimer(event.clientY);
               }}
-              className="absolute bottom-3 left-1/2 flex h-5 w-24 -translate-x-1/2 cursor-ns-resize items-center justify-center rounded-md border border-current/35 bg-current/15 opacity-80"
+              className="absolute bottom-4 left-1/2 flex h-5 w-24 -translate-x-1/2 cursor-ns-resize items-center justify-center rounded-md border border-current/35 bg-current/15 opacity-80"
             >
               <span className="h-1 w-14 rounded-full bg-current opacity-70" />
             </span>
