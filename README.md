@@ -23,6 +23,7 @@ De app haalt live eventdata op via Nostr-relays, toont het plaatje van het gesel
 Start de development server:
 
 ```bash
+npm install
 npm run dev
 ```
 

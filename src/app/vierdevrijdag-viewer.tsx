@@ -773,8 +773,8 @@ export default function VierDeVrijdagViewer() {
 
   const timerToneClass =
     timerTone === "light"
-      ? "bg-white/10 text-white/58 ring-white/10 drop-shadow-[0_12px_55px_rgba(0,0,0,0.55)]"
-      : "bg-black/10 text-black/58 ring-black/10 drop-shadow-[0_12px_55px_rgba(255,255,255,0.22)]";
+      ? "bg-white/10 text-white/58 ring-white/10 drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]"
+      : "bg-black/10 text-black/58 ring-black/10 drop-shadow-[0_4px_10px_rgba(255,255,255,0.18)]";
   const timerExpiredClass =
     remainingSeconds < 0
       ? timerTone === "light"
@@ -856,7 +856,7 @@ export default function VierDeVrijdagViewer() {
           onPointerMove={dragControls}
           onPointerUp={stopControlsDrag}
           onPointerCancel={stopControlsDrag}
-          className="flex w-full cursor-grab flex-wrap items-center gap-2 rounded-xl border border-white/20 bg-[#2d1232]/65 p-2 shadow-2xl shadow-black/45 backdrop-blur-xl active:cursor-grabbing sm:p-3"
+          className="flex w-full cursor-grab flex-wrap items-center gap-2 rounded-xl border border-white/20 bg-[#2d1232]/65 p-2 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-xl active:cursor-grabbing sm:p-3"
         >
           <div className="relative min-w-0 flex-[1_1_320px]">
             <button
