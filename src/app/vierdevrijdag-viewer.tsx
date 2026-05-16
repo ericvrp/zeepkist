@@ -773,8 +773,8 @@ export default function VierDeVrijdagViewer() {
 
   const timerToneClass =
     timerTone === "light"
-      ? "bg-white/10 text-white/58 ring-white/10 drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]"
-      : "bg-black/10 text-black/58 ring-black/10 drop-shadow-[0_4px_10px_rgba(255,255,255,0.18)]";
+      ? "bg-white/10 text-white/58 ring-white/10 drop-shadow-[0_6px_16px_rgba(0,0,0,0.48)]"
+      : "bg-black/10 text-black/58 ring-black/10 drop-shadow-[0_6px_16px_rgba(255,255,255,0.3)]";
   const timerExpiredClass =
     remainingSeconds < 0
       ? timerTone === "light"
